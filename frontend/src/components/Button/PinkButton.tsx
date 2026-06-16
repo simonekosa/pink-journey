@@ -1,4 +1,5 @@
 import { TouchableOpacity, Text, StyleSheet } from "react-native";
+
 import { COLORS } from "../../theme/colors";
 
 interface PinkButtonProps {
@@ -8,7 +9,11 @@ interface PinkButtonProps {
 
 export default function PinkButton({ title, onPress }: PinkButtonProps) {
   return (
-    <TouchableOpacity style={styles.button} onPress={onPress}>
+    <TouchableOpacity
+      activeOpacity={0.85}
+      style={styles.button}
+      onPress={onPress}
+    >
       <Text style={styles.text}>{title}</Text>
     </TouchableOpacity>
   );
@@ -17,14 +22,19 @@ export default function PinkButton({ title, onPress }: PinkButtonProps) {
 const styles = StyleSheet.create({
   button: {
     backgroundColor: COLORS.primary,
-    paddingVertical: 14,
-    borderRadius: 30,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 999,
     alignItems: "center",
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.22,
+    shadowRadius: 14,
+    elevation: 5,
   },
-
   text: {
-    color: "#FFF",
+    color: COLORS.white,
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
   },
 });

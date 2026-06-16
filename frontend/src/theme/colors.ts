@@ -3,8 +3,11 @@ export const COLORS = {
   primaryDark: "#C2185B",
   primaryLight: "#F8C8DC",
 
+  secondary: "#FFF0F5",
+
   background: "#FFF9FB",
   surface: "#FFFFFF",
+  white: "#FFFFFF",
 
   text: "#333333",
   subtitle: "#777777",
