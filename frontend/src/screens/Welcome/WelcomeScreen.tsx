@@ -1,20 +1,33 @@
-import { SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
   Camera,
   Clock,
   HeartPulse,
+  Pill,
   Salad,
   Scale,
-  Pill,
 } from "lucide-react-native";
 
 import PinkButton from "../../components/Button/PinkButton";
 import FeatureCard from "../../components/Card/FeatureCard";
+import { RootStackParamList } from "../../navigation/AppNavigator";
 import { COLORS } from "../../theme/colors";
 
+type NavigationProps = NativeStackNavigationProp<RootStackParamList, "Welcome">;
+
 export default function WelcomeScreen() {
+  const navigation = useNavigation<NavigationProps>();
+
   function handleStart() {
-    console.log("Começar jornada");
+    navigation.navigate("ProfileSetup");
   }
 
   return (
