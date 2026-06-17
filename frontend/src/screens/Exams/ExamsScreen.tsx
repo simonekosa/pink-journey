@@ -1,4 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+import {
+  ExamRecord,
+  getExamRecords,
+  saveExamRecords,
+} from "../../storage/examsStorage";
+
 import {
   Modal,
   SafeAreaView,
@@ -15,14 +22,6 @@ import PinkButton from "../../components/Button/PinkButton";
 import BackButton from "../../components/Button/BackButton";
 import { COLORS } from "../../theme/colors";
 
-type ExamRecord = {
-  id: string;
-  date: string;
-  glucose: string;
-  insulin: string;
-  homaIr: string;
-  vitaminD: string;
-};
 
 export default function ExamsScreen() {
   const [modalVisible, setModalVisible] = useState(false);
@@ -41,50 +40,71 @@ export default function ExamsScreen() {
   const [ferritin, setFerritin] = useState("");
   const [b12, setB12] = useState("");
 
-  const [records, setRecords] = useState<ExamRecord[]>([
-    {
-      id: "1",
-      date: "16/06/2026",
-      glucose: "112",
-      insulin: "28",
-      homaIr: "7,8",
-      vitaminD: "22",
-    },
-  ]);
+const [records, setRecords] = useState<ExamRecord[]>([]);
 
-  function handleSave() {
-    const today = new Date().toLocaleDateString("pt-BR");
+useEffect(() => {
+  loadRecords();
+}, []);
 
-    setRecords((current) => [
-      {
-        id: String(Date.now()),
-        date: today,
-        glucose: glucose || "-",
-        insulin: insulin || "-",
-        homaIr: homaIr || "-",
-        vitaminD: vitaminD || "-",
-      },
-      ...current,
-    ]);
+async function loadRecords() {
+  const stored = await getExamRecords();
 
-    setGlucose("");
-    setInsulin("");
-    setHomaIr("");
-    setHba1c("");
-    setTotalCholesterol("");
-    setHdl("");
-    setLdl("");
-    setTriglycerides("");
-    setTsh("");
-    setFreeT4("");
-    setVitaminD("");
-    setFerritin("");
-    setB12("");
-
-    setModalVisible(false);
+  if (stored.length > 0) {
+    setRecords(stored);
   }
+}
 
-  const latest = records[0];
+  async function handleSave() {
+  const today = new Date().toLocaleDateString("pt-BR");
+
+  const newRecord: ExamRecord = {
+    id: String(Date.now()),
+    date: today,
+    glucose,
+    insulin,
+    homaIr,
+    hba1c,
+    totalCholesterol,
+    hdl,
+    ldl,
+    triglycerides,
+    tsh,
+    freeT4,
+    vitaminD,
+    ferritin,
+    b12,
+  };
+
+  const updatedRecords = [newRecord, ...records];
+
+  setRecords(updatedRecords);
+
+  await saveExamRecords(updatedRecords);
+
+  setGlucose("");
+  setInsulin("");
+  setHomaIr("");
+  setHba1c("");
+  setTotalCholesterol("");
+  setHdl("");
+  setLdl("");
+  setTriglycerides("");
+  setTsh("");
+  setFreeT4("");
+  setVitaminD("");
+  setFerritin("");
+  setB12("");
+
+  setModalVisible(false);
+}
+
+  const latest = records[0] ?? {
+  date: "-",
+  glucose: "-",
+  insulin: "-",
+  homaIr: "-",
+  vitaminD: "-",
+};
 
   return (
     <SafeAreaView style={styles.safe}>

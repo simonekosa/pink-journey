@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Modal,
   SafeAreaView,
@@ -13,28 +13,23 @@ import {
   CalendarDays,
   Clock,
   MapPin,
-  Plus,
   Stethoscope,
   X,
 } from "lucide-react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 
 import PinkButton from "../../components/Button/PinkButton";
 import BackButton from "../../components/Button/BackButton";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import {
+  AppointmentRecord,
+  getAppointmentRecords,
+  saveAppointmentRecords,
+} from "../../storage/appointmentsStorage";
 import { COLORS } from "../../theme/colors";
-
-type Appointment = {
-  id: string;
-  doctor: string;
-  type: string;
-  date: string;
-  time: string;
-  location: string;
-  notes: string;
-};
 
 export default function MedicalAppointmentsScreen() {
   const [modalVisible, setModalVisible] = useState(false);
+  const [appointments, setAppointments] = useState<AppointmentRecord[]>([]);
 
   const [doctor, setDoctor] = useState("");
   const [type, setType] = useState("");
@@ -42,53 +37,52 @@ export default function MedicalAppointmentsScreen() {
   const [notes, setNotes] = useState("");
   const [appointmentDate, setAppointmentDate] = useState(new Date());
 
-const [showDatePicker, setShowDatePicker] = useState(false);
-const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
-  const [appointments, setAppointments] = useState<Appointment[]>([
-    {
-      id: "1",
-      doctor: "Endocrinologista",
-      type: "Consulta",
-      date: "25/06/2026",
-      time: "09:30",
-      location: "Clínica Saúde",
-      notes: "Levar exames recentes.",
-    },
-  ]);
+  useEffect(() => {
+    loadAppointments();
+  }, []);
+
+  async function loadAppointments() {
+    const savedAppointments = await getAppointmentRecords();
+    setAppointments(savedAppointments);
+  }
 
   function formatDate(date: Date) {
-  return date.toLocaleDateString("pt-BR");
-}
+    return date.toLocaleDateString("pt-BR");
+  }
 
-function formatTime(date: Date) {
-  return date.toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+  function formatTime(date: Date) {
+    return date.toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
 
-  function handleSave() {
+  async function handleSave() {
     if (!doctor) return;
 
-    setAppointments((current) => [
-      {
-        id: String(Date.now()),
-        doctor,
-        type: type || "Consulta",
-        date: formatDate(appointmentDate),
-time: formatTime(appointmentDate),
-        location,
-        notes,
-      },
-      ...current,
-    ]);
+    const newAppointment: AppointmentRecord = {
+      id: String(Date.now()),
+      doctor,
+      type: type || "Consulta",
+      date: formatDate(appointmentDate),
+      time: formatTime(appointmentDate),
+      location,
+      notes,
+    };
+
+    const updatedAppointments = [newAppointment, ...appointments];
+
+    setAppointments(updatedAppointments);
+    await saveAppointmentRecords(updatedAppointments);
 
     setDoctor("");
     setType("");
-    
     setLocation("");
     setNotes("");
+    setAppointmentDate(new Date());
     setModalVisible(false);
   }
 
@@ -108,9 +102,13 @@ time: formatTime(appointmentDate),
         <View style={styles.heroCard}>
           <View>
             <Text style={styles.heroLabel}>Próximo agendamento</Text>
-            <Text style={styles.heroValue}>{nextAppointment.date}</Text>
+            <Text style={styles.heroValue}>
+              {nextAppointment ? nextAppointment.date : "Nenhum"}
+            </Text>
             <Text style={styles.heroText}>
-              {nextAppointment.doctor} • {nextAppointment.time}
+              {nextAppointment
+                ? `${nextAppointment.doctor} • ${nextAppointment.time}`
+                : "Cadastre sua próxima consulta"}
             </Text>
           </View>
 
@@ -129,37 +127,41 @@ time: formatTime(appointmentDate),
         <Text style={styles.sectionTitle}>Agenda</Text>
 
         <View style={styles.listCard}>
-          {appointments.map((item) => (
-            <View key={item.id} style={styles.appointmentItem}>
-              <View style={styles.appointmentIcon}>
-                <CalendarDays size={20} color={COLORS.primary} />
-              </View>
-
-              <View style={styles.appointmentContent}>
-                <Text style={styles.appointmentTitle}>{item.doctor}</Text>
-
-                <Text style={styles.appointmentText}>
-                  {item.type} • {item.date}
-                </Text>
-
-                <View style={styles.infoRow}>
-                  <Clock size={14} color={COLORS.subtitle} />
-                  <Text style={styles.infoText}>{item.time || "Sem horário"}</Text>
+          {appointments.length === 0 ? (
+            <Text style={styles.emptyText}>Nenhum agendamento cadastrado.</Text>
+          ) : (
+            appointments.map((item) => (
+              <View key={item.id} style={styles.appointmentItem}>
+                <View style={styles.appointmentIcon}>
+                  <CalendarDays size={20} color={COLORS.primary} />
                 </View>
 
-                <View style={styles.infoRow}>
-                  <MapPin size={14} color={COLORS.subtitle} />
-                  <Text style={styles.infoText}>
-                    {item.location || "Sem local informado"}
+                <View style={styles.appointmentContent}>
+                  <Text style={styles.appointmentTitle}>{item.doctor}</Text>
+
+                  <Text style={styles.appointmentText}>
+                    {item.type} • {item.date}
                   </Text>
-                </View>
 
-                {!!item.notes && (
-                  <Text style={styles.notes}>{item.notes}</Text>
-                )}
+                  <View style={styles.infoRow}>
+                    <Clock size={14} color={COLORS.subtitle} />
+                    <Text style={styles.infoText}>
+                      {item.time || "Sem horário"}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <MapPin size={14} color={COLORS.subtitle} />
+                    <Text style={styles.infoText}>
+                      {item.location || "Sem local informado"}
+                    </Text>
+                  </View>
+
+                  {!!item.notes && <Text style={styles.notes}>{item.notes}</Text>}
+                </View>
               </View>
-            </View>
-          ))}
+            ))
+          )}
         </View>
       </ScrollView>
 
@@ -193,27 +195,27 @@ time: formatTime(appointmentDate),
                 onChangeText={setType}
               />
 
-             <Text style={styles.label}>Data</Text>
+              <Text style={styles.label}>Data</Text>
+              <TouchableOpacity
+                style={styles.input}
+                activeOpacity={0.8}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Text style={styles.inputText}>
+                  {formatDate(appointmentDate)}
+                </Text>
+              </TouchableOpacity>
 
-<TouchableOpacity
-  style={styles.input}
-  onPress={() => setShowDatePicker(true)}
->
-  <Text style={styles.inputText}>
-    {formatDate(appointmentDate)}
-  </Text>
-</TouchableOpacity>
-
-            <Text style={styles.label}>Horário</Text>
-
-<TouchableOpacity
-  style={styles.input}
-  onPress={() => setShowTimePicker(true)}
->
-  <Text style={styles.inputText}>
-    {formatTime(appointmentDate)}
-  </Text>
-</TouchableOpacity>
+              <Text style={styles.label}>Horário</Text>
+              <TouchableOpacity
+                style={styles.input}
+                activeOpacity={0.8}
+                onPress={() => setShowTimePicker(true)}
+              >
+                <Text style={styles.inputText}>
+                  {formatTime(appointmentDate)}
+                </Text>
+              </TouchableOpacity>
 
               <Text style={styles.label}>Local</Text>
               <TextInput
@@ -236,39 +238,39 @@ time: formatTime(appointmentDate),
               />
 
               {showDatePicker && (
-  <DateTimePicker
-    value={appointmentDate}
-    mode="date"
-    display="default"
-    onChange={(event, selectedDate) => {
-      setShowDatePicker(false);
+                <DateTimePicker
+                  value={appointmentDate}
+                  mode="date"
+                  display="default"
+                  onChange={(event, selectedDate) => {
+                    setShowDatePicker(false);
 
-      if (selectedDate) {
-        setAppointmentDate(selectedDate);
-      }
-    }}
-  />
-)}
+                    if (selectedDate) {
+                      setAppointmentDate(selectedDate);
+                    }
+                  }}
+                />
+              )}
 
-{showTimePicker && (
-  <DateTimePicker
-    value={appointmentDate}
-    mode="time"
-    display="default"
-    onChange={(event, selectedDate) => {
-      setShowTimePicker(false);
+              {showTimePicker && (
+                <DateTimePicker
+                  value={appointmentDate}
+                  mode="time"
+                  display="default"
+                  onChange={(event, selectedDate) => {
+                    setShowTimePicker(false);
 
-      if (selectedDate) {
-        const newDate = new Date(appointmentDate);
+                    if (selectedDate) {
+                      const newDate = new Date(appointmentDate);
 
-        newDate.setHours(selectedDate.getHours());
-        newDate.setMinutes(selectedDate.getMinutes());
+                      newDate.setHours(selectedDate.getHours());
+                      newDate.setMinutes(selectedDate.getMinutes());
 
-        setAppointmentDate(newDate);
-      }
-    }}
-  />
-)}
+                      setAppointmentDate(newDate);
+                    }
+                  }}
+                />
+              )}
 
               <View style={styles.modalButtonArea}>
                 <PinkButton title="Salvar agendamento" onPress={handleSave} />
@@ -384,6 +386,11 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: COLORS.text,
   },
+  emptyText: {
+    fontSize: 14,
+    color: COLORS.subtitle,
+    paddingVertical: 8,
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.25)",
@@ -431,7 +438,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   inputText: {
-  fontSize: 15,
-  color: COLORS.text,
-},
+    fontSize: 15,
+    color: COLORS.text,
+  },
 });

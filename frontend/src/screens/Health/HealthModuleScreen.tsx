@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   SafeAreaView,
   ScrollView,
@@ -19,36 +20,128 @@ import {
 import { useNavigation } from "@react-navigation/native";
 
 import { COLORS } from "../../theme/colors";
+import {
+  BioRecord,
+  getBioimpedanceRecords,
+} from "../../storage/bioimpedanceStorage";
+import {
+  ExamRecord,
+  getExamRecords,
+} from "../../storage/examsStorage";
+import {
+  MedicationRecord,
+  getMedicationRecords,
+} from "../../storage/medicationStorage";
+import {
+  AppointmentRecord,
+  getAppointmentRecords,
+} from "../../storage/appointmentsStorage";
 
-const healthModules = [
-  {
-    title: "Bioimpedância",
-    route: "Bioimpedance",
-    description: "Último peso: 105 kg • Gordura: 42%",
-    icon: Scale,
-  },
-  {
-    title: "Exames",
-    route: "Exams",
-    description: "Último exame: 16/06 • Glicemia: 112",
-    icon: Beaker,
-  },
-  {
-    title: "Medicação",
-    route: "Medication",
-    description: "Próxima aplicação: 22/06 • Mounjaro 5mg",
-    icon: Pill,
-  },
-  {
-    title: "Agendamentos",
-    route: "MedicalAppointments",
-    description: "Próxima consulta: 25/06 às 09:30",
-    icon: CalendarDays,
-  },
-];
+type HealthModule = {
+  title: string;
+  route: string;
+  description: string;
+  icon: any;
+};
 
 export default function HealthModuleScreen() {
   const navigation = useNavigation<any>();
+
+  const [latestBio, setLatestBio] = useState<BioRecord | null>(null);
+  const [latestExam, setLatestExam] = useState<ExamRecord | null>(null);
+  const [latestMedication, setLatestMedication] =
+    useState<MedicationRecord | null>(null);
+  const [nextAppointment, setNextAppointment] =
+    useState<AppointmentRecord | null>(null);
+
+  useEffect(() => {
+    loadHealthData();
+  }, []);
+
+  async function loadHealthData() {
+    const bioRecords = await getBioimpedanceRecords();
+    const examRecords = await getExamRecords();
+    const medicationRecords = await getMedicationRecords();
+    const appointmentRecords = await getAppointmentRecords();
+
+    setLatestBio(bioRecords[0] ?? null);
+    setLatestExam(examRecords[0] ?? null);
+    setLatestMedication(medicationRecords[0] ?? null);
+    setNextAppointment(appointmentRecords[0] ?? null);
+  }
+
+  function formatNumber(value?: number) {
+    if (value === undefined || value === null) return "-";
+
+    return value.toLocaleString("pt-BR", {
+      maximumFractionDigits: 1,
+    });
+  }
+
+  function getNextApplicationDate(dateText?: string) {
+    if (!dateText) return "-";
+
+    const [day, month, year] = dateText.split("/").map(Number);
+
+    if (!day || !month || !year) return "-";
+
+    const date = new Date(year, month - 1, day);
+    date.setDate(date.getDate() + 7);
+
+    return date.toLocaleDateString("pt-BR");
+  }
+
+  function getNumberDiff(current?: number, previous?: number) {
+    if (current === undefined || previous === undefined) return null;
+
+    return current - previous;
+  }
+
+const bodyFatDiff = null;
+const muscleMassDiff = null;
+
+  
+
+  const healthModules: HealthModule[] = [
+    {
+      title: "Bioimpedância",
+      route: "Bioimpedance",
+      description: latestBio
+        ? `Último peso: ${formatNumber(latestBio.weight)} kg • Gordura: ${formatNumber(
+            latestBio.bodyFat
+          )}%`
+        : "Nenhum registro de bioimpedância ainda.",
+      icon: Scale,
+    },
+    {
+      title: "Exames",
+      route: "Exams",
+      description: latestExam
+        ? `Último exame: ${latestExam.date} • Glicemia: ${
+            latestExam.glucose || "-"
+          }`
+        : "Nenhum exame cadastrado ainda.",
+      icon: Beaker,
+    },
+    {
+      title: "Medicação",
+      route: "Medication",
+      description: latestMedication
+        ? `Próxima aplicação: ${getNextApplicationDate(
+            latestMedication.date
+          )} • ${latestMedication.medication} ${latestMedication.dose}`
+        : "Nenhuma aplicação cadastrada ainda.",
+      icon: Pill,
+    },
+    {
+      title: "Agendamentos",
+      route: "MedicalAppointments",
+      description: nextAppointment
+        ? `Próxima consulta: ${nextAppointment.date} às ${nextAppointment.time}`
+        : "Nenhum agendamento cadastrado ainda.",
+      icon: CalendarDays,
+    },
+  ];
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -70,7 +163,7 @@ export default function HealthModuleScreen() {
           <View style={styles.heroContent}>
             <Text style={styles.heroTitle}>Além do peso</Text>
             <Text style={styles.heroText}>
-              Veja sua saúde evoluindo por vários indicadores.
+              Veja sua saúde evoluindo por vários indicadores reais.
             </Text>
           </View>
         </View>
@@ -110,13 +203,27 @@ export default function HealthModuleScreen() {
         <View style={styles.compareGrid}>
           <View style={styles.compareCard}>
             <Activity size={22} color={COLORS.primary} />
-            <Text style={styles.compareValue}>-4,2%</Text>
+            <Text style={styles.compareValue}>
+              {bodyFatDiff !== null
+                ? `${bodyFatDiff > 0 ? "+" : ""}${formatNumber(bodyFatDiff)}%`
+                : latestBio
+                ? `${formatNumber(latestBio.bodyFat)}%`
+                : "-"}
+            </Text>
             <Text style={styles.compareLabel}>Gordura corporal</Text>
           </View>
 
           <View style={styles.compareCard}>
             <Scale size={22} color={COLORS.primary} />
-            <Text style={styles.compareValue}>+1,8kg</Text>
+            <Text style={styles.compareValue}>
+              {muscleMassDiff !== null
+                ? `${muscleMassDiff > 0 ? "+" : ""}${formatNumber(
+                    muscleMassDiff
+                  )}kg`
+                : latestBio
+                ? `${formatNumber(latestBio.muscleMass)}kg`
+                : "-"}
+            </Text>
             <Text style={styles.compareLabel}>Massa muscular</Text>
           </View>
         </View>

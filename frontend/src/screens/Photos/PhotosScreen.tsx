@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   Image,
@@ -21,13 +21,27 @@ import {
 
 import PinkButton from "../../components/Button/PinkButton";
 import { COLORS } from "../../theme/colors";
+import {
+  PhotoRecord,
+  getPhotoRecords,
+  savePhotoRecords,
+} from "../../storage/photosStorage";
 
 type PhotoPosition = "front" | "right" | "left" | "back";
+
+type PhotosState = Record<PhotoPosition, string | null>;
 
 type PhotoItem = {
   id: PhotoPosition;
   title: string;
   description: string;
+};
+
+const emptyPhotos: PhotosState = {
+  front: null,
+  right: null,
+  left: null,
+  back: null,
 };
 
 const photoPositions: PhotoItem[] = [
@@ -38,12 +52,28 @@ const photoPositions: PhotoItem[] = [
 ];
 
 export default function PhotosScreen() {
-  const [photos, setPhotos] = useState<Record<PhotoPosition, string | null>>({
-    front: null,
-    right: null,
-    left: null,
-    back: null,
-  });
+  const [photos, setPhotos] = useState<PhotosState>(emptyPhotos);
+  const [records, setRecords] = useState<PhotoRecord[]>([]);
+
+  useEffect(() => {
+    loadPhotos();
+  }, []);
+
+  async function loadPhotos() {
+    const storedRecords = await getPhotoRecords();
+    setRecords(storedRecords);
+
+    if (storedRecords.length > 0) {
+      const latest = storedRecords[0];
+
+      setPhotos({
+        front: latest.front,
+        right: latest.right,
+        left: latest.left,
+        back: latest.back,
+      });
+    }
+  }
 
   const filledPhotosCount = Object.values(photos).filter(Boolean).length;
   const hasAnyPhoto = filledPhotosCount > 0;
@@ -108,12 +138,42 @@ export default function PhotosScreen() {
     }
   }
 
+  async function handleSaveCompleteRecord() {
+    if (!isComplete) {
+      Alert.alert(
+        "Registro incompleto",
+        "Adicione as 4 fotos: frente, lado direito, lado esquerdo e costas."
+      );
+      return;
+    }
+
+    const newRecord: PhotoRecord = {
+      id: String(Date.now()),
+      date: new Date().toLocaleDateString("pt-BR"),
+      front: photos.front,
+      right: photos.right,
+      left: photos.left,
+      back: photos.back,
+    };
+
+    const updatedRecords = [newRecord, ...records];
+
+    setRecords(updatedRecords);
+    await savePhotoRecords(updatedRecords);
+
+    Alert.alert("Registro salvo", "Suas fotos foram salvas com sucesso.");
+  }
+
   function handleStartFullRecord() {
+    setPhotos(emptyPhotos);
     Alert.alert(
       "Novo registro completo",
-      "Toque em cada card para adicionar frente, lado direito, lado esquerdo e costas."
+      "Agora adicione frente, lado direito, lado esquerdo e costas. Depois clique em Salvar registro completo."
     );
   }
+
+  const beforeRecord = records[records.length - 1];
+  const afterRecord = records[0];
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -135,7 +195,7 @@ export default function PhotosScreen() {
 
           <View style={styles.heroContent}>
             <Text style={styles.heroTitle}>
-              {isComplete ? "Registro completo" : "Primeiro registro"}
+              {isComplete ? "Registro completo" : "Novo registro"}
             </Text>
             <Text style={styles.heroText}>
               {filledPhotosCount}/4 fotos adicionadas neste registro.
@@ -156,6 +216,13 @@ export default function PhotosScreen() {
           <PinkButton
             title="+ Novo registro completo"
             onPress={handleStartFullRecord}
+          />
+        </View>
+
+        <View style={styles.buttonArea}>
+          <PinkButton
+            title="Salvar registro completo"
+            onPress={handleSaveCompleteRecord}
           />
         </View>
 
@@ -200,16 +267,22 @@ export default function PhotosScreen() {
 
           <View style={styles.compareImages}>
             <View style={styles.compareImageBox}>
-              {photos.front ? (
-                <Image source={{ uri: photos.front }} style={styles.photoImage} />
+              {beforeRecord?.front ? (
+                <Image
+                  source={{ uri: beforeRecord.front }}
+                  style={styles.photoImage}
+                />
               ) : (
                 <Text style={styles.comparePlaceholder}>Antes</Text>
               )}
             </View>
 
             <View style={styles.compareImageBox}>
-              {photos.back ? (
-                <Image source={{ uri: photos.back }} style={styles.photoImage} />
+              {afterRecord?.front ? (
+                <Image
+                  source={{ uri: afterRecord.front }}
+                  style={styles.photoImage}
+                />
               ) : (
                 <Text style={styles.comparePlaceholder}>Depois</Text>
               )}
@@ -217,8 +290,9 @@ export default function PhotosScreen() {
           </View>
 
           <Text style={styles.compareText}>
-            Futuramente você poderá escolher dois registros diferentes para
-            comparar lado a lado.
+            {records.length >= 2
+              ? `${beforeRecord.date} x ${afterRecord.date}`
+              : "Salve pelo menos 2 registros completos para comparar sua evolução."}
           </Text>
         </View>
 
@@ -226,7 +300,7 @@ export default function PhotosScreen() {
 
         <View style={styles.timelineCard}>
           <View style={styles.timelineIcon}>
-            {hasAnyPhoto ? (
+            {records.length > 0 ? (
               <CalendarDays size={24} color={COLORS.primary} />
             ) : (
               <Images size={24} color={COLORS.primary} />
@@ -234,15 +308,30 @@ export default function PhotosScreen() {
           </View>
 
           <Text style={styles.timelineTitle}>
-            {hasAnyPhoto ? "Registro inicial criado" : "Nenhum registro ainda"}
+            {records.length > 0
+              ? `${records.length} registro(s) salvo(s)`
+              : "Nenhum registro ainda"}
           </Text>
 
           <Text style={styles.timelineText}>
-            {hasAnyPhoto
-              ? "Suas primeiras fotos já foram adicionadas. Na próxima etapa, vamos salvar esse histórico localmente no celular."
-              : "Quando você adicionar suas primeiras fotos, elas aparecerão aqui organizadas por data."}
+            {records.length > 0
+              ? "Seus registros foram salvos localmente no celular."
+              : "Quando você salvar suas primeiras fotos, elas aparecerão aqui organizadas por data."}
           </Text>
         </View>
+
+        {records.length > 0 && (
+          <View style={styles.recordsList}>
+            {records.map((item) => (
+              <View key={item.id} style={styles.recordItem}>
+                <Text style={styles.recordDate}>{item.date}</Text>
+                <Text style={styles.recordText}>
+                  Frente • Lados • Costas registrados
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         <View style={styles.noteCard}>
           <Sparkles size={24} color={COLORS.primary} />
@@ -330,7 +419,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   buttonArea: {
-    marginBottom: 26,
+    marginBottom: 14,
   },
   sectionTitle: {
     fontSize: 20,
@@ -441,7 +530,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     alignItems: "center",
-    marginBottom: 24,
+    marginBottom: 18,
   },
   timelineIcon: {
     width: 54,
@@ -462,6 +551,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     textAlign: "center",
+    color: COLORS.subtitle,
+  },
+  recordsList: {
+    gap: 10,
+    marginBottom: 24,
+  },
+  recordItem: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  recordDate: {
+    fontSize: 15,
+    fontWeight: "900",
+    color: COLORS.text,
+  },
+  recordText: {
+    marginTop: 4,
+    fontSize: 13,
     color: COLORS.subtitle,
   },
   noteCard: {

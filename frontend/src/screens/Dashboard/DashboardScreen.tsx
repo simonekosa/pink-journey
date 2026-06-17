@@ -21,27 +21,71 @@ import {
   getProfile,
   UserProfile,
 } from "../../storage/profileStorage";
+import {
+  MedicationRecord,
+  getMedicationRecords,
+} from "../../storage/medicationStorage";
+import {
+  AppointmentRecord,
+  getAppointmentRecords,
+} from "../../storage/appointmentsStorage";
+import { ExamRecord, getExamRecords } from "../../storage/examsStorage";
+import { FastingRecord, getFastingRecords } from "../../storage/fastingStorage";
+import { PhotoRecord, getPhotoRecords } from "../../storage/photosStorage";
 
 import { COLORS } from "../../theme/colors";
 
 export default function DashboardScreen() {
   const [latestBio, setLatestBio] = useState<BioRecord | null>(null);
   const [profile, setProfile] = useState<UserProfile>(defaultProfile);
+  const [latestMedication, setLatestMedication] =
+    useState<MedicationRecord | null>(null);
+  const [nextAppointment, setNextAppointment] =
+    useState<AppointmentRecord | null>(null);
+  const [latestExam, setLatestExam] = useState<ExamRecord | null>(null);
+  const [fastingHistory, setFastingHistory] = useState<FastingRecord[]>([]);
+  const [photoRecords, setPhotoRecords] = useState<PhotoRecord[]>([]);
 
   useEffect(() => {
-    async function loadData() {
-      const records = await getBioimpedanceRecords();
-      const storedProfile = await getProfile();
-
-      if (records.length > 0) {
-        setLatestBio(records[0]);
-      }
-
-      setProfile(storedProfile);
-    }
-
     loadData();
   }, []);
+
+  async function loadData() {
+    const bioRecords = await getBioimpedanceRecords();
+    const storedProfile = await getProfile();
+    const medications = await getMedicationRecords();
+    const appointments = await getAppointmentRecords();
+    const exams = await getExamRecords();
+    const fastings = await getFastingRecords();
+    const photos = await getPhotoRecords();
+
+    setLatestBio(bioRecords[0] ?? null);
+    setProfile(storedProfile);
+    setLatestMedication(medications[0] ?? null);
+    setNextAppointment(appointments[0] ?? null);
+    setLatestExam(exams[0] ?? null);
+    setFastingHistory(fastings);
+    setPhotoRecords(photos);
+  }
+
+  function formatNumber(value: number) {
+    return value.toLocaleString("pt-BR", {
+      maximumFractionDigits: 1,
+    });
+  }
+
+  function getNextApplicationDate(dateText?: string) {
+    if (!dateText) return "-";
+
+    const [day, month, year] = dateText.split("/").map(Number);
+
+    if (!day || !month || !year) return "-";
+
+    const date = new Date(year, month - 1, day);
+    date.setDate(date.getDate() + 7);
+
+    return date.toLocaleDateString("pt-BR");
+  }
 
   const currentWeight = latestBio?.weight ?? profile.startWeight;
   const lostWeight = Math.max(profile.startWeight - currentWeight, 0);
@@ -51,13 +95,38 @@ export default function DashboardScreen() {
   const progress =
     totalGoal > 0 ? Math.min((lostWeight / totalGoal) * 100, 100) : 0;
 
-  const currentWeightLabel = `${currentWeight.toLocaleString("pt-BR", {
-    maximumFractionDigits: 1,
-  })} kg`;
-
-  const bodyFat = latestBio ? `${latestBio.bodyFat}%` : "-";
-  const muscleMass = latestBio ? `${latestBio.muscleMass} kg` : "-";
+  const currentWeightLabel = `${formatNumber(currentWeight)} kg`;
+  const bodyFat = latestBio ? `${formatNumber(latestBio.bodyFat)}%` : "-";
+  const muscleMass = latestBio
+    ? `${formatNumber(latestBio.muscleMass)} kg`
+    : "-";
   const bmi = latestBio ? latestBio.bmi.toFixed(1).replace(".", ",") : "-";
+
+  const nextMedicationDate = latestMedication
+    ? getNextApplicationDate(latestMedication.date)
+    : "-";
+
+  const medicationText = latestMedication
+    ? `${latestMedication.medication} ${latestMedication.dose}`
+    : "Sem aplicação";
+
+  const appointmentText = nextAppointment
+    ? `${nextAppointment.doctor} • ${nextAppointment.date}`
+    : "Sem consulta";
+
+  const examText = latestExam
+    ? `Glicemia: ${latestExam.glucose || "-"}`
+    : "Sem exame";
+
+  const fastingText =
+    fastingHistory.length > 0
+      ? `${fastingHistory.length} jejuns`
+      : "Nenhum jejum";
+
+  const photoText =
+    photoRecords.length > 0
+      ? `${photoRecords.length} registro(s)`
+      : "Sem fotos";
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -74,10 +143,7 @@ export default function DashboardScreen() {
 
           <Text style={styles.heroText}>
             Meta: {profile.targetWeight} kg • Faltam{" "}
-            {remainingWeight.toLocaleString("pt-BR", {
-              maximumFractionDigits: 1,
-            })}{" "}
-            kg
+            {formatNumber(remainingWeight)} kg
           </Text>
 
           <View style={styles.progressTrack}>
@@ -92,22 +158,14 @@ export default function DashboardScreen() {
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
             <Flame size={22} color={COLORS.primary} />
-            <Text style={styles.statValue}>
-              {lostWeight.toLocaleString("pt-BR", {
-                maximumFractionDigits: 1,
-              })}{" "}
-              kg
-            </Text>
+            <Text style={styles.statValue}>{formatNumber(lostWeight)} kg</Text>
             <Text style={styles.statLabel}>Peso perdido</Text>
           </View>
 
           <View style={styles.statCard}>
             <Target size={22} color={COLORS.primary} />
             <Text style={styles.statValue}>
-              {remainingWeight.toLocaleString("pt-BR", {
-                maximumFractionDigits: 1,
-              })}{" "}
-              kg
+              {formatNumber(remainingWeight)} kg
             </Text>
             <Text style={styles.statLabel}>Faltam para meta</Text>
           </View>
@@ -141,37 +199,39 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Seu planner</Text>
+        <Text style={styles.sectionTitle}>Resumo do dia</Text>
 
         <View style={styles.grid}>
           <View style={styles.menuCard}>
-            <Camera size={26} color={COLORS.primary} />
-            <Text style={styles.menuTitle}>Fotos</Text>
-            <Text style={styles.menuText}>Evolução corporal</Text>
-          </View>
-
-          <View style={styles.menuCard}>
-            <Scale size={26} color={COLORS.primary} />
-            <Text style={styles.menuTitle}>Medidas</Text>
-            <Text style={styles.menuText}>Peso e corpo</Text>
-          </View>
-
-          <View style={styles.menuCard}>
             <Pill size={26} color={COLORS.primary} />
             <Text style={styles.menuTitle}>Medicação</Text>
-            <Text style={styles.menuText}>Aplicações</Text>
+            <Text style={styles.menuText}>
+              {nextMedicationDate} • {medicationText}
+            </Text>
+          </View>
+
+          <View style={styles.menuCard}>
+            <CalendarDays size={26} color={COLORS.primary} />
+            <Text style={styles.menuTitle}>Consulta</Text>
+            <Text style={styles.menuText}>{appointmentText}</Text>
+          </View>
+
+          <View style={styles.menuCard}>
+            <HeartPulse size={26} color={COLORS.primary} />
+            <Text style={styles.menuTitle}>Exames</Text>
+            <Text style={styles.menuText}>{examText}</Text>
           </View>
 
           <View style={styles.menuCard}>
             <Clock size={26} color={COLORS.primary} />
             <Text style={styles.menuTitle}>Jejum</Text>
-            <Text style={styles.menuText}>Controle diário</Text>
+            <Text style={styles.menuText}>{fastingText}</Text>
           </View>
 
           <View style={styles.menuCard}>
-            <HeartPulse size={26} color={COLORS.primary} />
-            <Text style={styles.menuTitle}>Saúde</Text>
-            <Text style={styles.menuText}>Exames e consultas</Text>
+            <Camera size={26} color={COLORS.primary} />
+            <Text style={styles.menuTitle}>Fotos</Text>
+            <Text style={styles.menuText}>{photoText}</Text>
           </View>
 
           <View style={styles.menuCard}>

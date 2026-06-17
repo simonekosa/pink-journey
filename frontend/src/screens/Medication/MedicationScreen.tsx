@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Modal,
   SafeAreaView,
@@ -17,35 +17,100 @@ import {
   Plus,
   Syringe,
 } from "lucide-react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 
 import PinkButton from "../../components/Button/PinkButton";
 import BackButton from "../../components/Button/BackButton";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import {
+  MedicationRecord,
+  getMedicationRecords,
+  saveMedicationRecords,
+} from "../../storage/medicationStorage";
 import { COLORS } from "../../theme/colors";
-
-const medicationHistory = [
-  { id: "1", date: "15/06/2026", dose: "5mg", place: "Abdômen" },
-  { id: "2", date: "08/06/2026", dose: "5mg", place: "Coxa direita" },
-  { id: "3", date: "01/06/2026", dose: "2,5mg", place: "Braço esquerdo" },
-];
 
 export default function MedicationScreen() {
   const [modalVisible, setModalVisible] = useState(false);
+
+  const [medication, setMedication] = useState("Mounjaro");
+  const [dose, setDose] = useState("");
+  const [place, setPlace] = useState("");
+
+  const [records, setRecords] = useState<MedicationRecord[]>([]);
+
   const [applicationDate, setApplicationDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
-const [showDatePicker, setShowDatePicker] = useState(false);
+  useEffect(() => {
+    loadRecords();
+  }, []);
 
-const [showTimePicker, setShowTimePicker] = useState(false);
-function formatDate(date: Date) {
-  return date.toLocaleDateString("pt-BR");
-}
+  async function loadRecords() {
+    const stored = await getMedicationRecords();
 
-function formatTime(date: Date) {
-  return date.toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+    if (stored.length > 0) {
+      setRecords(stored);
+    }
+  }
+
+  function formatDate(date: Date) {
+    return date.toLocaleDateString("pt-BR");
+  }
+
+  function formatTime(date: Date) {
+    return date.toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
+  function getNextApplicationDate(dateText: string) {
+    const [day, month, year] = dateText.split("/").map(Number);
+
+    if (!day || !month || !year) {
+      return "";
+    }
+
+    const date = new Date(year, month - 1, day);
+    date.setDate(date.getDate() + 7);
+
+    return formatDate(date);
+  }
+
+  async function handleSave() {
+    if (!medication || !dose || !place) {
+      return;
+    }
+
+    const newRecord: MedicationRecord = {
+      id: String(Date.now()),
+      medication,
+      dose,
+      place,
+      date: formatDate(applicationDate),
+      time: formatTime(applicationDate),
+    };
+
+    const updatedRecords = [newRecord, ...records];
+
+    setRecords(updatedRecords);
+    await saveMedicationRecords(updatedRecords);
+
+    setDose("");
+    setPlace("");
+    setApplicationDate(new Date());
+    setModalVisible(false);
+  }
+
+  const latest = records[0];
+
+  const currentMedication = latest?.medication ?? "Mounjaro";
+  const currentDose = latest?.dose ?? "Sem dose";
+  const lastDate = latest?.date ?? "Nenhuma aplicação";
+  const lastTime = latest?.time ?? "";
+  const lastPlace = latest?.place ?? "-";
+  const nextApplication = latest ? getNextApplicationDate(latest.date) : "-";
+
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView
@@ -53,6 +118,7 @@ function formatTime(date: Date) {
         showsVerticalScrollIndicator={false}
       >
         <BackButton />
+
         <Text style={styles.eyebrow}>Medicação</Text>
         <Text style={styles.title}>Controle suas aplicações</Text>
         <Text style={styles.subtitle}>
@@ -62,8 +128,8 @@ function formatTime(date: Date) {
         <View style={styles.heroCard}>
           <View>
             <Text style={styles.heroLabel}>Medicamento atual</Text>
-            <Text style={styles.heroValue}>Mounjaro</Text>
-            <Text style={styles.heroText}>Dose atual: 5mg</Text>
+            <Text style={styles.heroValue}>{currentMedication}</Text>
+            <Text style={styles.heroText}>Dose atual: {currentDose}</Text>
           </View>
 
           <View style={styles.heroIcon}>
@@ -74,7 +140,7 @@ function formatTime(date: Date) {
         <View style={styles.summaryRow}>
           <View style={styles.summaryCard}>
             <CalendarDays size={22} color={COLORS.primary} />
-            <Text style={styles.summaryValue}>22/06</Text>
+            <Text style={styles.summaryValue}>{nextApplication}</Text>
             <Text style={styles.summaryLabel}>Próxima aplicação</Text>
           </View>
 
@@ -86,7 +152,10 @@ function formatTime(date: Date) {
         </View>
 
         <View style={styles.buttonArea}>
-          <PinkButton title="+ Nova aplicação" onPress={() => setModalVisible(true)} />
+          <PinkButton
+            title="+ Nova aplicação"
+            onPress={() => setModalVisible(true)}
+          />
         </View>
 
         <Text style={styles.sectionTitle}>Última aplicação</Text>
@@ -97,130 +166,157 @@ function formatTime(date: Date) {
           </View>
 
           <View style={styles.lastContent}>
-            <Text style={styles.lastTitle}>15/06/2026 às 08:00</Text>
-            <Text style={styles.lastText}>Dose: 5mg • Local: Abdômen</Text>
+            <Text style={styles.lastTitle}>
+              {latest ? `${lastDate} às ${lastTime}` : "Nenhuma aplicação"}
+            </Text>
+            <Text style={styles.lastText}>
+              {latest
+                ? `Dose: ${currentDose} • Local: ${lastPlace}`
+                : "Cadastre sua primeira aplicação."}
+            </Text>
           </View>
         </View>
 
         <Text style={styles.sectionTitle}>Histórico</Text>
 
         <View style={styles.historyCard}>
-          {medicationHistory.map((item) => (
-            <View key={item.id} style={styles.historyItem}>
-              <View style={styles.historyIcon}>
-                <MapPin size={18} color={COLORS.primary} />
-              </View>
+          {records.length === 0 ? (
+            <Text style={styles.emptyText}>Nenhuma aplicação cadastrada.</Text>
+          ) : (
+            records.map((item) => (
+              <View key={item.id} style={styles.historyItem}>
+                <View style={styles.historyIcon}>
+                  <MapPin size={18} color={COLORS.primary} />
+                </View>
 
-              <View style={styles.historyContent}>
-                <Text style={styles.historyDate}>{item.date}</Text>
-                <Text style={styles.historyPlace}>{item.place}</Text>
-              </View>
+                <View style={styles.historyContent}>
+                  <Text style={styles.historyDate}>
+                    {item.date} às {item.time}
+                  </Text>
+                  <Text style={styles.historyPlace}>
+                    {item.medication} • {item.place}
+                  </Text>
+                </View>
 
-              <Text style={styles.historyDose}>{item.dose}</Text>
-            </View>
-          ))}
+                <Text style={styles.historyDose}>{item.dose}</Text>
+              </View>
+            ))
+          )}
         </View>
 
         <View style={styles.noteCard}>
           <Plus size={22} color={COLORS.primary} />
           <Text style={styles.noteTitle}>Observações</Text>
           <Text style={styles.noteText}>
-            Futuramente, essa tela terá lembretes, registro de sintomas e
-            controle automático da próxima aplicação.
+            A próxima aplicação é calculada automaticamente com intervalo de 7
+            dias após o último registro.
           </Text>
         </View>
       </ScrollView>
+
       <Modal visible={modalVisible} animationType="slide" transparent>
-  <View style={styles.modalOverlay}>
-    <View style={styles.modalContent}>
-      <View style={styles.modalHeader}>
-        <Text style={styles.modalTitle}>Nova aplicação</Text>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Nova aplicação</Text>
 
-        <TouchableOpacity onPress={() => setModalVisible(false)}>
-          <Text style={styles.closeText}>Fechar</Text>
-        </TouchableOpacity>
-      </View>
+              <TouchableOpacity onPress={() => setModalVisible(false)}>
+                <Text style={styles.closeText}>Fechar</Text>
+              </TouchableOpacity>
+            </View>
 
-      <Text style={styles.label}>Medicamento</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Ex: Mounjaro"
-        placeholderTextColor={COLORS.subtitle}
-      />
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={styles.label}>Medicamento</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Ex: Mounjaro"
+                placeholderTextColor={COLORS.subtitle}
+                value={medication}
+                onChangeText={setMedication}
+              />
 
-      <Text style={styles.label}>Dose</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Ex: 5mg"
-        placeholderTextColor={COLORS.subtitle}
-      />
+              <Text style={styles.label}>Dose</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Ex: 5mg"
+                placeholderTextColor={COLORS.subtitle}
+                value={dose}
+                onChangeText={setDose}
+              />
 
-<Text style={styles.label}>Data</Text>
-<TouchableOpacity
-  style={styles.input}
-  activeOpacity={0.8}
-  onPress={() => setShowDatePicker(true)}
->
-  <Text style={styles.inputText}>{formatDate(applicationDate)}</Text>
-</TouchableOpacity>
+              <Text style={styles.label}>Data</Text>
+              <TouchableOpacity
+                style={styles.input}
+                activeOpacity={0.8}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Text style={styles.inputText}>
+                  {formatDate(applicationDate)}
+                </Text>
+              </TouchableOpacity>
 
-<Text style={styles.label}>Horário</Text>
-<TouchableOpacity
-  style={styles.input}
-  activeOpacity={0.8}
-  onPress={() => setShowTimePicker(true)}
->
-  <Text style={styles.inputText}>{formatTime(applicationDate)}</Text>
-</TouchableOpacity>
+              <Text style={styles.label}>Horário</Text>
+              <TouchableOpacity
+                style={styles.input}
+                activeOpacity={0.8}
+                onPress={() => setShowTimePicker(true)}
+              >
+                <Text style={styles.inputText}>
+                  {formatTime(applicationDate)}
+                </Text>
+              </TouchableOpacity>
 
-      <Text style={styles.label}>Local da aplicação</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Ex: Abdômen"
-        placeholderTextColor={COLORS.subtitle}
-      />
+              <Text style={styles.label}>Local da aplicação</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Ex: Abdômen"
+                placeholderTextColor={COLORS.subtitle}
+                value={place}
+                onChangeText={setPlace}
+              />
 
-      {showDatePicker && (
-  <DateTimePicker
-    value={applicationDate}
-    mode="date"
-    display="default"
-    onChange={(event, selectedDate) => {
-      setShowDatePicker(false);
+              {showDatePicker && (
+                <DateTimePicker
+                  value={applicationDate}
+                  mode="date"
+                  display="default"
+                  onChange={(event, selectedDate) => {
+                    setShowDatePicker(false);
 
-      if (selectedDate) {
-        setApplicationDate(selectedDate);
-      }
-    }}
-  />
-)}
+                    if (selectedDate) {
+                      setApplicationDate(selectedDate);
+                    }
+                  }}
+                />
+              )}
 
-{showTimePicker && (
-  <DateTimePicker
-    value={applicationDate}
-    mode="time"
-    display="default"
-    onChange={(event, selectedDate) => {
-      setShowTimePicker(false);
+              {showTimePicker && (
+                <DateTimePicker
+                  value={applicationDate}
+                  mode="time"
+                  display="default"
+                  onChange={(event, selectedDate) => {
+                    setShowTimePicker(false);
 
-      if (selectedDate) {
-        const newDate = new Date(applicationDate);
+                    if (selectedDate) {
+                      const newDate = new Date(applicationDate);
 
-        newDate.setHours(selectedDate.getHours());
-        newDate.setMinutes(selectedDate.getMinutes());
+                      newDate.setHours(selectedDate.getHours());
+                      newDate.setMinutes(selectedDate.getMinutes());
 
-        setApplicationDate(newDate);
-      }
-    }}
-  />
-)}
+                      setApplicationDate(newDate);
+                    }
+                  }}
+                />
+              )}
 
-      <View style={styles.modalButtonArea}>
-        <PinkButton title="Salvar aplicação" onPress={() => setModalVisible(false)} />
-      </View>
-    </View>
-  </View>
-</Modal>
+              <View style={styles.modalButtonArea}>
+                <PinkButton title="Salvar aplicação" onPress={handleSave} />
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -302,7 +398,7 @@ const styles = StyleSheet.create({
   },
   summaryValue: {
     marginTop: 12,
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "900",
     color: COLORS.text,
   },
@@ -392,6 +488,11 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: COLORS.primary,
   },
+  emptyText: {
+    fontSize: 14,
+    color: COLORS.subtitle,
+    paddingVertical: 8,
+  },
   noteCard: {
     backgroundColor: COLORS.secondary,
     borderRadius: 24,
@@ -412,56 +513,56 @@ const styles = StyleSheet.create({
     color: COLORS.subtitle,
   },
   modalOverlay: {
-  flex: 1,
-  backgroundColor: "rgba(0,0,0,0.25)",
-  justifyContent: "flex-end",
-},
-modalContent: {
-  maxHeight: "88%",
-  backgroundColor: COLORS.background,
-  borderTopLeftRadius: 32,
-  borderTopRightRadius: 32,
-  padding: 24,
-},
-modalHeader: {
-  flexDirection: "row",
-  justifyContent: "space-between",
-  alignItems: "center",
-  marginBottom: 22,
-},
-modalTitle: {
-  fontSize: 24,
-  fontWeight: "900",
-  color: COLORS.text,
-},
-closeText: {
-  fontSize: 14,
-  fontWeight: "800",
-  color: COLORS.primary,
-},
-label: {
-  fontSize: 14,
-  fontWeight: "800",
-  color: COLORS.text,
-  marginBottom: 8,
-},
-input: {
-  backgroundColor: COLORS.surface,
-  borderWidth: 1,
-  borderColor: COLORS.border,
-  borderRadius: 18,
-  paddingHorizontal: 16,
-  paddingVertical: 14,
-  fontSize: 15,
-  color: COLORS.text,
-  marginBottom: 16,
-},
-modalButtonArea: {
-  marginTop: 10,
-  marginBottom: 20,
-},
-inputText: {
-  fontSize: 15,
-  color: COLORS.text,
-},
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.25)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    maxHeight: "88%",
+    backgroundColor: COLORS.background,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    padding: 24,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 22,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: "900",
+    color: COLORS.text,
+  },
+  closeText: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: COLORS.primary,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: COLORS.text,
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: COLORS.text,
+    marginBottom: 16,
+  },
+  modalButtonArea: {
+    marginTop: 10,
+    marginBottom: 20,
+  },
+  inputText: {
+    fontSize: 15,
+    color: COLORS.text,
+  },
 });

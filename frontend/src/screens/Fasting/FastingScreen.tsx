@@ -1,4 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
+
+import {
+  FastingRecord,
+  getFastingRecords,
+  saveFastingRecords,
+} from "../../storage/fastingStorage";
 import {
   SafeAreaView,
   ScrollView,
@@ -21,18 +27,23 @@ import { COLORS } from "../../theme/colors";
 
 type ProtocolType = 16 | 18 | 24;
 
-type HistoryItem = {
-  id: string;
-  date: string;
-  duration: string;
-};
+
 
 export default function FastingScreen() {
   const [protocol, setProtocol] = useState<ProtocolType>(16);
   const [isRunning, setIsRunning] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
-  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [history, setHistory] = useState<FastingRecord[]>([]);
+
+  useEffect(() => {
+  loadHistory();
+}, []);
+
+async function loadHistory() {
+  const stored = await getFastingRecords();
+  setHistory(stored);
+}
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
@@ -92,24 +103,26 @@ export default function FastingScreen() {
   function startFast() {
     setIsRunning(true);
   }
+async function stopFast() {
+  if (elapsedSeconds > 0) {
+    const date = new Date().toLocaleDateString("pt-BR");
 
-  function stopFast() {
-    if (elapsedSeconds > 0) {
-      const date = new Date().toLocaleDateString("pt-BR");
+    const newRecord: FastingRecord = {
+      id: String(Date.now()),
+      date,
+      duration: formatTime(elapsedSeconds),
+      protocol,
+    };
 
-      setHistory((current) => [
-        {
-          id: String(Date.now()),
-          date,
-          duration: formatTime(elapsedSeconds),
-        },
-        ...current,
-      ]);
-    }
+    const updatedHistory = [newRecord, ...history];
 
-    setIsRunning(false);
-    setElapsedSeconds(0);
+    setHistory(updatedHistory);
+    await saveFastingRecords(updatedHistory);
   }
+
+  setIsRunning(false);
+  setElapsedSeconds(0);
+}
 
   return (
     <SafeAreaView style={styles.safe}>
