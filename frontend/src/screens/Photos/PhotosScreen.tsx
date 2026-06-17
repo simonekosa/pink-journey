@@ -10,7 +10,14 @@ import {
   View,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { Camera, ImagePlus, Images, Sparkles } from "lucide-react-native";
+import {
+  CalendarDays,
+  Camera,
+  Images,
+  ImagePlus,
+  RefreshCcw,
+  Sparkles,
+} from "lucide-react-native";
 
 import PinkButton from "../../components/Button/PinkButton";
 import { COLORS } from "../../theme/colors";
@@ -24,26 +31,10 @@ type PhotoItem = {
 };
 
 const photoPositions: PhotoItem[] = [
-  {
-    id: "front",
-    title: "Frente",
-    description: "Foto frontal do corpo",
-  },
-  {
-    id: "right",
-    title: "Lado direito",
-    description: "Foto lateral direita",
-  },
-  {
-    id: "left",
-    title: "Lado esquerdo",
-    description: "Foto lateral esquerda",
-  },
-  {
-    id: "back",
-    title: "Costas",
-    description: "Foto de costas",
-  },
+  { id: "front", title: "Frente", description: "Foto frontal do corpo" },
+  { id: "right", title: "Lado direito", description: "Foto lateral direita" },
+  { id: "left", title: "Lado esquerdo", description: "Foto lateral esquerda" },
+  { id: "back", title: "Costas", description: "Foto de costas" },
 ];
 
 export default function PhotosScreen() {
@@ -54,20 +45,15 @@ export default function PhotosScreen() {
     back: null,
   });
 
+  const filledPhotosCount = Object.values(photos).filter(Boolean).length;
+  const hasAnyPhoto = filledPhotosCount > 0;
+  const isComplete = filledPhotosCount === 4;
+
   async function handleSelectPhoto(position: PhotoPosition) {
     Alert.alert("Adicionar foto", "Escolha uma opção", [
-      {
-        text: "Câmera",
-        onPress: () => openCamera(position),
-      },
-      {
-        text: "Galeria",
-        onPress: () => openGallery(position),
-      },
-      {
-        text: "Cancelar",
-        style: "cancel",
-      },
+      { text: "Câmera", onPress: () => openCamera(position) },
+      { text: "Galeria", onPress: () => openGallery(position) },
+      { text: "Cancelar", style: "cancel" },
     ]);
   }
 
@@ -122,7 +108,12 @@ export default function PhotosScreen() {
     }
   }
 
-  const hasAnyPhoto = Object.values(photos).some(Boolean);
+  function handleStartFullRecord() {
+    Alert.alert(
+      "Novo registro completo",
+      "Toque em cada card para adicionar frente, lado direito, lado esquerdo e costas."
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -143,52 +134,103 @@ export default function PhotosScreen() {
           </View>
 
           <View style={styles.heroContent}>
-            <Text style={styles.heroTitle}>Primeiro registro</Text>
-            <Text style={styles.heroText}>
-              Adicione suas fotos iniciais: frente, lados e costas.
+            <Text style={styles.heroTitle}>
+              {isComplete ? "Registro completo" : "Primeiro registro"}
             </Text>
+            <Text style={styles.heroText}>
+              {filledPhotosCount}/4 fotos adicionadas neste registro.
+            </Text>
+
+            <View style={styles.progressTrack}>
+              <View
+                style={[
+                  styles.progressFill,
+                  { width: `${(filledPhotosCount / 4) * 100}%` },
+                ]}
+              />
+            </View>
           </View>
         </View>
 
         <View style={styles.buttonArea}>
           <PinkButton
-            title="+ Novo registro de fotos"
-            onPress={() => handleSelectPhoto("front")}
+            title="+ Novo registro completo"
+            onPress={handleStartFullRecord}
           />
         </View>
 
         <Text style={styles.sectionTitle}>Posições das fotos</Text>
 
         <View style={styles.grid}>
-          {photoPositions.map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              style={styles.photoCard}
-              activeOpacity={0.85}
-              onPress={() => handleSelectPhoto(item.id)}
-            >
-              <View style={styles.photoPlaceholder}>
-                {photos[item.id] ? (
-                  <Image
-                    source={{ uri: photos[item.id] || "" }}
-                    style={styles.photoImage}
-                  />
-                ) : (
-                  <ImagePlus size={34} color={COLORS.primary} />
-                )}
-              </View>
+          {photoPositions.map((item) => {
+            const photoUri = photos[item.id];
 
-              <Text style={styles.photoTitle}>{item.title}</Text>
-              <Text style={styles.photoDescription}>{item.description}</Text>
-            </TouchableOpacity>
-          ))}
+            return (
+              <TouchableOpacity
+                key={item.id}
+                style={styles.photoCard}
+                activeOpacity={0.85}
+                onPress={() => handleSelectPhoto(item.id)}
+              >
+                <View style={styles.photoPlaceholder}>
+                  {photoUri ? (
+                    <Image source={{ uri: photoUri }} style={styles.photoImage} />
+                  ) : (
+                    <View style={styles.emptyPhoto}>
+                      <ImagePlus size={34} color={COLORS.primary} />
+                      <Text style={styles.emptyPhotoText}>Adicionar</Text>
+                    </View>
+                  )}
+                </View>
+
+                <Text style={styles.photoTitle}>{item.title}</Text>
+                <Text style={styles.photoDescription}>{item.description}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        <Text style={styles.sectionTitle}>Comparação</Text>
+
+        <View style={styles.compareCard}>
+          <View style={styles.compareHeader}>
+            <RefreshCcw size={22} color={COLORS.primary} />
+            <Text style={styles.compareTitle}>Antes x Depois</Text>
+          </View>
+
+          <View style={styles.compareImages}>
+            <View style={styles.compareImageBox}>
+              {photos.front ? (
+                <Image source={{ uri: photos.front }} style={styles.photoImage} />
+              ) : (
+                <Text style={styles.comparePlaceholder}>Antes</Text>
+              )}
+            </View>
+
+            <View style={styles.compareImageBox}>
+              {photos.back ? (
+                <Image source={{ uri: photos.back }} style={styles.photoImage} />
+              ) : (
+                <Text style={styles.comparePlaceholder}>Depois</Text>
+              )}
+            </View>
+          </View>
+
+          <Text style={styles.compareText}>
+            Futuramente você poderá escolher dois registros diferentes para
+            comparar lado a lado.
+          </Text>
         </View>
 
         <Text style={styles.sectionTitle}>Linha do tempo</Text>
 
         <View style={styles.timelineCard}>
           <View style={styles.timelineIcon}>
-            <Images size={24} color={COLORS.primary} />
+            {hasAnyPhoto ? (
+              <CalendarDays size={24} color={COLORS.primary} />
+            ) : (
+              <Images size={24} color={COLORS.primary} />
+            )}
           </View>
 
           <Text style={styles.timelineTitle}>
@@ -197,7 +239,7 @@ export default function PhotosScreen() {
 
           <Text style={styles.timelineText}>
             {hasAnyPhoto
-              ? "Suas primeiras fotos já foram adicionadas. Futuramente elas serão salvas no banco de dados."
+              ? "Suas primeiras fotos já foram adicionadas. Na próxima etapa, vamos salvar esse histórico localmente no celular."
               : "Quando você adicionar suas primeiras fotos, elas aparecerão aqui organizadas por data."}
           </Text>
         </View>
@@ -275,6 +317,18 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     opacity: 0.9,
   },
+  progressTrack: {
+    height: 8,
+    backgroundColor: "rgba(255,255,255,0.35)",
+    borderRadius: 999,
+    marginTop: 12,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: 8,
+    backgroundColor: COLORS.white,
+    borderRadius: 999,
+  },
   buttonArea: {
     marginBottom: 26,
   },
@@ -299,7 +353,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   photoPlaceholder: {
-    height: 130,
+    height: 150,
     borderRadius: 20,
     backgroundColor: COLORS.secondary,
     alignItems: "center",
@@ -309,6 +363,16 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     borderStyle: "dashed",
     overflow: "hidden",
+  },
+  emptyPhoto: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyPhotoText: {
+    marginTop: 8,
+    fontSize: 13,
+    fontWeight: "800",
+    color: COLORS.primary,
   },
   photoImage: {
     width: "100%",
@@ -321,6 +385,51 @@ const styles = StyleSheet.create({
   },
   photoDescription: {
     marginTop: 4,
+    fontSize: 13,
+    lineHeight: 18,
+    color: COLORS.subtitle,
+  },
+  compareCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 24,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginBottom: 26,
+  },
+  compareHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 14,
+  },
+  compareTitle: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: COLORS.text,
+  },
+  compareImages: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  compareImageBox: {
+    flex: 1,
+    height: 150,
+    borderRadius: 18,
+    backgroundColor: COLORS.secondary,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  comparePlaceholder: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: COLORS.primary,
+  },
+  compareText: {
+    marginTop: 14,
     fontSize: 13,
     lineHeight: 18,
     color: COLORS.subtitle,

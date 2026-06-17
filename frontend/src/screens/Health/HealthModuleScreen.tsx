@@ -1,35 +1,55 @@
-import { SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import {
   Activity,
   ArrowRight,
   Beaker,
+  CalendarDays,
   HeartPulse,
   Pill,
   Scale,
   Sparkles,
 } from "lucide-react-native";
+import { useNavigation } from "@react-navigation/native";
 
 import { COLORS } from "../../theme/colors";
 
 const healthModules = [
   {
     title: "Bioimpedância",
-    description: "Gordura corporal, massa muscular, IMC e metabolismo.",
+    route: "Bioimpedance",
+    description: "Último peso: 105 kg • Gordura: 42%",
     icon: Scale,
   },
   {
     title: "Exames",
-    description: "Glicemia, insulina, colesterol, vitaminas e hormônios.",
+    route: "Exams",
+    description: "Último exame: 16/06 • Glicemia: 112",
     icon: Beaker,
   },
   {
     title: "Medicação",
-    description: "Aplicações, doses, datas e locais de aplicação.",
+    route: "Medication",
+    description: "Próxima aplicação: 22/06 • Mounjaro 5mg",
     icon: Pill,
+  },
+  {
+    title: "Agendamentos",
+    route: "MedicalAppointments",
+    description: "Próxima consulta: 25/06 às 09:30",
+    icon: CalendarDays,
   },
 ];
 
 export default function HealthModuleScreen() {
+  const navigation = useNavigation<any>();
+
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView
@@ -37,9 +57,9 @@ export default function HealthModuleScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={styles.eyebrow}>Saúde</Text>
-        <Text style={styles.title}>Acompanhe seus indicadores</Text>
+        <Text style={styles.title}>Sua evolução completa</Text>
         <Text style={styles.subtitle}>
-          Registre bioimpedância, exames e medicações para comparar sua evolução.
+          Acompanhe composição corporal, exames, medicações e consultas.
         </Text>
 
         <View style={styles.heroCard}>
@@ -48,21 +68,26 @@ export default function HealthModuleScreen() {
           </View>
 
           <View style={styles.heroContent}>
-            <Text style={styles.heroTitle}>Visão completa da saúde</Text>
+            <Text style={styles.heroTitle}>Além do peso</Text>
             <Text style={styles.heroText}>
-              Acompanhe composição corporal e indicadores laboratoriais.
+              Veja sua saúde evoluindo por vários indicadores.
             </Text>
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Módulos</Text>
+        <Text style={styles.sectionTitle}>Área de saúde</Text>
 
         <View style={styles.modules}>
           {healthModules.map((item) => {
             const Icon = item.icon;
 
             return (
-              <View key={item.title} style={styles.moduleCard}>
+              <TouchableOpacity
+                key={item.title}
+                style={styles.moduleCard}
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate(item.route)}
+              >
                 <View style={styles.moduleIcon}>
                   <Icon size={24} color={COLORS.primary} />
                 </View>
@@ -75,7 +100,7 @@ export default function HealthModuleScreen() {
                 </View>
 
                 <ArrowRight size={22} color={COLORS.primary} />
-              </View>
+              </TouchableOpacity>
             );
           })}
         </View>
@@ -101,7 +126,7 @@ export default function HealthModuleScreen() {
           <Text style={styles.noteTitle}>Por que acompanhar?</Text>
           <Text style={styles.noteText}>
             Às vezes o peso demora a mudar, mas a gordura baixa, a massa
-            muscular sobe e os exames melhoram.
+            muscular sobe, os exames melhoram e isso também é progresso.
           </Text>
         </View>
       </ScrollView>

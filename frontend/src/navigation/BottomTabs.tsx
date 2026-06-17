@@ -5,7 +5,6 @@ import {
   Clock,
   HeartPulse,
   Home,
-  Pill,
   Scale,
   User,
 } from "lucide-react-native";
@@ -17,7 +16,6 @@ import FastingScreen from "../screens/Fasting/FastingScreen";
 import MedicationScreen from "../screens/Medication/MedicationScreen";
 import ProfileScreen from "../screens/Profile/ProfileScreen";
 import HealthModuleScreen from "../screens/Health/HealthModuleScreen";
-import ActivityScreen from "../screens/Activity/ActivityScreen";
 
 import { COLORS } from "../theme/colors";
 
@@ -26,9 +24,7 @@ export type BottomTabParamList = {
   Photos: undefined;
   Measurements: undefined;
   Fasting: undefined;
-  Health: undefined;
-  Activity: undefined;
-  Medication: undefined;
+  Health: undefined;  
   Profile: undefined;
 };
 
@@ -93,21 +89,9 @@ export default function BottomTabs() {
         }}
       />
 
-      <Tab.Screen
-        name="Activity"
-        component={ActivityScreen}
-        options={{
-          tabBarIcon: ({ color }) => <Activity size={26} color={color} />,
-        }}
-      />
+      
 
-      <Tab.Screen
-        name="Medication"
-        component={MedicationScreen}
-        options={{
-          tabBarIcon: ({ color }) => <Pill size={26} color={color} />,
-        }}
-      />
+      
 
       <Tab.Screen
         name="Profile"

@@ -1,48 +1,143 @@
+import { useEffect, useState } from "react";
 import { SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 import {
   CalendarDays,
   Camera,
   Clock,
   Flame,
+  HeartPulse,
   Pill,
-  Salad,
   Scale,
+  Target,
   Trophy,
 } from "lucide-react-native";
+
+import {
+  BioRecord,
+  getBioimpedanceRecords,
+} from "../../storage/bioimpedanceStorage";
+import {
+  defaultProfile,
+  getProfile,
+  UserProfile,
+} from "../../storage/profileStorage";
 
 import { COLORS } from "../../theme/colors";
 
 export default function DashboardScreen() {
+  const [latestBio, setLatestBio] = useState<BioRecord | null>(null);
+  const [profile, setProfile] = useState<UserProfile>(defaultProfile);
+
+  useEffect(() => {
+    async function loadData() {
+      const records = await getBioimpedanceRecords();
+      const storedProfile = await getProfile();
+
+      if (records.length > 0) {
+        setLatestBio(records[0]);
+      }
+
+      setProfile(storedProfile);
+    }
+
+    loadData();
+  }, []);
+
+  const currentWeight = latestBio?.weight ?? profile.startWeight;
+  const lostWeight = Math.max(profile.startWeight - currentWeight, 0);
+  const remainingWeight = Math.max(currentWeight - profile.targetWeight, 0);
+
+  const totalGoal = profile.startWeight - profile.targetWeight;
+  const progress =
+    totalGoal > 0 ? Math.min((lostWeight / totalGoal) * 100, 100) : 0;
+
+  const currentWeightLabel = `${currentWeight.toLocaleString("pt-BR", {
+    maximumFractionDigits: 1,
+  })} kg`;
+
+  const bodyFat = latestBio ? `${latestBio.bodyFat}%` : "-";
+  const muscleMass = latestBio ? `${latestBio.muscleMass} kg` : "-";
+  const bmi = latestBio ? latestBio.bmi.toFixed(1).replace(".", ",") : "-";
+
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.greeting}>Olá, Simone 🌸</Text>
+        <Text style={styles.greeting}>Olá, {profile.name} 🌸</Text>
         <Text style={styles.title}>Sua evolução hoje</Text>
 
         <View style={styles.heroCard}>
           <Text style={styles.heroLabel}>Peso atual</Text>
-          <Text style={styles.heroValue}>105 kg</Text>
-          <Text style={styles.heroText}>Meta: 85 kg • Faltam 20 kg</Text>
+          <Text style={styles.heroValue}>{currentWeightLabel}</Text>
+
+          <Text style={styles.heroText}>
+            Meta: {profile.targetWeight} kg • Faltam{" "}
+            {remainingWeight.toLocaleString("pt-BR", {
+              maximumFractionDigits: 1,
+            })}{" "}
+            kg
+          </Text>
 
           <View style={styles.progressTrack}>
-            <View style={styles.progressFill} />
+            <View style={[styles.progressFill, { width: `${progress}%` }]} />
+          </View>
+
+          <Text style={styles.progressText}>
+            {progress.toFixed(0)}% da meta concluída
+          </Text>
+        </View>
+
+        <View style={styles.statsRow}>
+          <View style={styles.statCard}>
+            <Flame size={22} color={COLORS.primary} />
+            <Text style={styles.statValue}>
+              {lostWeight.toLocaleString("pt-BR", {
+                maximumFractionDigits: 1,
+              })}{" "}
+              kg
+            </Text>
+            <Text style={styles.statLabel}>Peso perdido</Text>
+          </View>
+
+          <View style={styles.statCard}>
+            <Target size={22} color={COLORS.primary} />
+            <Text style={styles.statValue}>
+              {remainingWeight.toLocaleString("pt-BR", {
+                maximumFractionDigits: 1,
+              })}{" "}
+              kg
+            </Text>
+            <Text style={styles.statLabel}>Faltam para meta</Text>
+          </View>
+        </View>
+
+        <View style={styles.statsRow}>
+          <View style={styles.statCard}>
+            <HeartPulse size={22} color={COLORS.primary} />
+            <Text style={styles.statValue}>{bodyFat}</Text>
+            <Text style={styles.statLabel}>Gordura corporal</Text>
+          </View>
+
+          <View style={styles.statCard}>
+            <Scale size={22} color={COLORS.primary} />
+            <Text style={styles.statValue}>{muscleMass}</Text>
+            <Text style={styles.statLabel}>Massa muscular</Text>
           </View>
         </View>
 
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
             <Scale size={22} color={COLORS.primary} />
-            <Text style={styles.statValue}>0 kg</Text>
-            <Text style={styles.statLabel}>Perdidos</Text>
+            <Text style={styles.statValue}>{bmi}</Text>
+            <Text style={styles.statLabel}>IMC</Text>
           </View>
 
           <View style={styles.statCard}>
             <CalendarDays size={22} color={COLORS.primary} />
-            <Text style={styles.statValue}>1</Text>
-            <Text style={styles.statLabel}>Dia</Text>
+            <Text style={styles.statValue}>{profile.startDate}</Text>
+            <Text style={styles.statLabel}>Início da jornada</Text>
           </View>
         </View>
 
@@ -74,9 +169,9 @@ export default function DashboardScreen() {
           </View>
 
           <View style={styles.menuCard}>
-            <Salad size={26} color={COLORS.primary} />
-            <Text style={styles.menuTitle}>Refeições</Text>
-            <Text style={styles.menuText}>Diário alimentar</Text>
+            <HeartPulse size={26} color={COLORS.primary} />
+            <Text style={styles.menuTitle}>Saúde</Text>
+            <Text style={styles.menuText}>Exames e consultas</Text>
           </View>
 
           <View style={styles.menuCard}>
@@ -105,7 +200,7 @@ const styles = StyleSheet.create({
   },
   container: {
     padding: 24,
-    paddingBottom: 40,
+    paddingBottom: 110,
   },
   greeting: {
     fontSize: 16,
@@ -148,17 +243,24 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.35)",
     borderRadius: 999,
     marginTop: 20,
+    overflow: "hidden",
   },
   progressFill: {
-    width: "12%",
     height: 10,
     backgroundColor: COLORS.white,
     borderRadius: 999,
   },
+  progressText: {
+    marginTop: 8,
+    fontSize: 13,
+    fontWeight: "800",
+    color: COLORS.white,
+    opacity: 0.9,
+  },
   statsRow: {
     flexDirection: "row",
     gap: 14,
-    marginBottom: 26,
+    marginBottom: 16,
   },
   statCard: {
     flex: 1,
@@ -183,6 +285,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: COLORS.text,
     fontWeight: "900",
+    marginTop: 10,
     marginBottom: 14,
   },
   grid: {

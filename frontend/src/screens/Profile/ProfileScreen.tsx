@@ -1,4 +1,14 @@
-import { SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import {
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import {
   CalendarDays,
   Camera,
@@ -9,10 +19,17 @@ import {
   Target,
   Timer,
   User,
+  X,
 } from "lucide-react-native";
 
 import PinkButton from "../../components/Button/PinkButton";
 import { COLORS } from "../../theme/colors";
+import {
+  defaultProfile,
+  getProfile,
+  saveProfile,
+  UserProfile,
+} from "../../storage/profileStorage";
 
 const stats = [
   { label: "Dias de jornada", value: "1", icon: CalendarDays },
@@ -22,6 +39,57 @@ const stats = [
 ];
 
 export default function ProfileScreen() {
+  const [modalVisible, setModalVisible] = useState(false);
+  const [profile, setProfile] = useState<UserProfile>(defaultProfile);
+
+  const [name, setName] = useState("");
+  const [height, setHeight] = useState("");
+  const [startWeight, setStartWeight] = useState("");
+  const [targetWeight, setTargetWeight] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [goal, setGoal] = useState("");
+
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  async function loadProfile() {
+    const storedProfile = await getProfile();
+    setProfile(storedProfile);
+  }
+
+  function openEditModal() {
+    setName(profile.name);
+    setHeight(String(profile.height).replace(".", ","));
+    setStartWeight(String(profile.startWeight).replace(".", ","));
+    setTargetWeight(String(profile.targetWeight).replace(".", ","));
+    setStartDate(profile.startDate);
+    setGoal(profile.goal);
+    setModalVisible(true);
+  }
+
+  function parseNumber(value: string) {
+    const parsed = Number(value.replace(",", "."));
+    return Number.isNaN(parsed) ? 0 : parsed;
+  }
+
+  async function handleSaveProfile() {
+    const updatedProfile: UserProfile = {
+      name: name || "Simone",
+      height: parseNumber(height),
+      startWeight: parseNumber(startWeight),
+      targetWeight: parseNumber(targetWeight),
+      startDate,
+      goal,
+    };
+
+    setProfile(updatedProfile);
+    await saveProfile(updatedProfile);
+    setModalVisible(false);
+  }
+
+  const weightToLose = profile.startWeight - profile.targetWeight;
+
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView
@@ -33,15 +101,19 @@ export default function ProfileScreen() {
             <User size={42} color={COLORS.primary} />
           </View>
 
-          <Text style={styles.name}>Simone</Text>
+          <Text style={styles.name}>{profile.name}</Text>
           <Text style={styles.subtitle}>Sua jornada Pink Journey</Text>
         </View>
 
         <View style={styles.heroCard}>
           <View>
             <Text style={styles.heroLabel}>Meta principal</Text>
-            <Text style={styles.heroTitle}>Perder 20 kg</Text>
-            <Text style={styles.heroText}>105 kg → 85 kg</Text>
+            <Text style={styles.heroTitle}>
+              Perder {weightToLose > 0 ? weightToLose : 0} kg
+            </Text>
+            <Text style={styles.heroText}>
+              {profile.startWeight} kg → {profile.targetWeight} kg
+            </Text>
           </View>
 
           <View style={styles.heroIcon}>
@@ -54,24 +126,26 @@ export default function ProfileScreen() {
         <View style={styles.summaryRow}>
           <View style={styles.summaryCard}>
             <Text style={styles.summaryLabel}>Peso inicial</Text>
-            <Text style={styles.summaryValue}>105 kg</Text>
+            <Text style={styles.summaryValue}>{profile.startWeight} kg</Text>
           </View>
 
           <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>Peso atual</Text>
-            <Text style={styles.summaryValue}>105 kg</Text>
+            <Text style={styles.summaryLabel}>Peso meta</Text>
+            <Text style={styles.summaryValue}>{profile.targetWeight} kg</Text>
           </View>
         </View>
 
         <View style={styles.summaryRow}>
           <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>Peso meta</Text>
-            <Text style={styles.summaryValue}>85 kg</Text>
+            <Text style={styles.summaryLabel}>Altura</Text>
+            <Text style={styles.summaryValue}>
+              {String(profile.height).replace(".", ",")} m
+            </Text>
           </View>
 
           <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>Altura</Text>
-            <Text style={styles.summaryValue}>1,70 m</Text>
+            <Text style={styles.summaryLabel}>Início</Text>
+            <Text style={styles.summaryValue}>{profile.startDate}</Text>
           </View>
         </View>
 
@@ -98,11 +172,7 @@ export default function ProfileScreen() {
 
         <View style={styles.goalCard}>
           <Heart size={24} color={COLORS.primary} />
-
-          <Text style={styles.goalText}>
-            Quero perder peso, melhorar minha saúde, ter mais energia e voltar a
-            me sentir bem comigo mesma.
-          </Text>
+          <Text style={styles.goalText}>{profile.goal}</Text>
         </View>
 
         <View style={styles.infoCard}>
@@ -110,19 +180,98 @@ export default function ProfileScreen() {
 
           <View style={styles.infoContent}>
             <Text style={styles.infoTitle}>Data de início</Text>
-            <Text style={styles.infoText}>16/06/2026</Text>
+            <Text style={styles.infoText}>{profile.startDate}</Text>
           </View>
         </View>
 
         <View style={styles.buttonArea}>
-          <PinkButton title="Editar Perfil" onPress={() => {}} />
+          <PinkButton title="Editar Perfil" onPress={openEditModal} />
         </View>
 
-        <View style={styles.secondaryButton}>
+        <TouchableOpacity style={styles.secondaryButton} onPress={openEditModal}>
           <Pencil size={18} color={COLORS.primary} />
           <Text style={styles.secondaryButtonText}>Atualizar metas</Text>
-        </View>
+        </TouchableOpacity>
       </ScrollView>
+
+      <Modal visible={modalVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Editar perfil</Text>
+
+              <TouchableOpacity onPress={() => setModalVisible(false)}>
+                <X size={24} color={COLORS.text} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={styles.label}>Nome</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Ex: Simone"
+                placeholderTextColor={COLORS.subtitle}
+                value={name}
+                onChangeText={setName}
+              />
+
+              <Text style={styles.label}>Altura</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Ex: 1,70"
+                placeholderTextColor={COLORS.subtitle}
+                keyboardType="decimal-pad"
+                value={height}
+                onChangeText={setHeight}
+              />
+
+              <Text style={styles.label}>Peso inicial</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Ex: 105"
+                placeholderTextColor={COLORS.subtitle}
+                keyboardType="decimal-pad"
+                value={startWeight}
+                onChangeText={setStartWeight}
+              />
+
+              <Text style={styles.label}>Peso meta</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Ex: 85"
+                placeholderTextColor={COLORS.subtitle}
+                keyboardType="decimal-pad"
+                value={targetWeight}
+                onChangeText={setTargetWeight}
+              />
+
+              <Text style={styles.label}>Data de início</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Ex: 16/06/2026"
+                placeholderTextColor={COLORS.subtitle}
+                value={startDate}
+                onChangeText={setStartDate}
+              />
+
+              <Text style={styles.label}>Objetivo</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder="Descreva seu objetivo"
+                placeholderTextColor={COLORS.subtitle}
+                value={goal}
+                onChangeText={setGoal}
+                multiline
+                textAlignVertical="top"
+              />
+
+              <View style={styles.modalButtonArea}>
+                <PinkButton title="Salvar perfil" onPress={handleSaveProfile} />
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -314,4 +463,51 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: COLORS.primary,
   },
+  modalOverlay: {
+  flex: 1,
+  backgroundColor: "rgba(0,0,0,0.25)",
+  justifyContent: "flex-end",
+},
+modalContent: {
+  maxHeight: "88%",
+  backgroundColor: COLORS.background,
+  borderTopLeftRadius: 32,
+  borderTopRightRadius: 32,
+  padding: 24,
+},
+modalHeader: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: 22,
+},
+modalTitle: {
+  fontSize: 24,
+  fontWeight: "900",
+  color: COLORS.text,
+},
+label: {
+  fontSize: 14,
+  fontWeight: "800",
+  color: COLORS.text,
+  marginBottom: 8,
+},
+input: {
+  backgroundColor: COLORS.surface,
+  borderWidth: 1,
+  borderColor: COLORS.border,
+  borderRadius: 18,
+  paddingHorizontal: 16,
+  paddingVertical: 14,
+  fontSize: 15,
+  color: COLORS.text,
+  marginBottom: 16,
+},
+textArea: {
+  minHeight: 110,
+},
+modalButtonArea: {
+  marginTop: 10,
+  marginBottom: 30,
+},
 });

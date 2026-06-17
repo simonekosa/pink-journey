@@ -1,4 +1,14 @@
-import { SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import {
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import {
   CalendarDays,
   Clock,
@@ -9,6 +19,8 @@ import {
 } from "lucide-react-native";
 
 import PinkButton from "../../components/Button/PinkButton";
+import BackButton from "../../components/Button/BackButton";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { COLORS } from "../../theme/colors";
 
 const medicationHistory = [
@@ -18,12 +30,29 @@ const medicationHistory = [
 ];
 
 export default function MedicationScreen() {
+  const [modalVisible, setModalVisible] = useState(false);
+  const [applicationDate, setApplicationDate] = useState(new Date());
+
+const [showDatePicker, setShowDatePicker] = useState(false);
+
+const [showTimePicker, setShowTimePicker] = useState(false);
+function formatDate(date: Date) {
+  return date.toLocaleDateString("pt-BR");
+}
+
+function formatTime(date: Date) {
+  return date.toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
       >
+        <BackButton />
         <Text style={styles.eyebrow}>Medicação</Text>
         <Text style={styles.title}>Controle suas aplicações</Text>
         <Text style={styles.subtitle}>
@@ -57,7 +86,7 @@ export default function MedicationScreen() {
         </View>
 
         <View style={styles.buttonArea}>
-          <PinkButton title="+ Nova aplicação" onPress={() => {}} />
+          <PinkButton title="+ Nova aplicação" onPress={() => setModalVisible(true)} />
         </View>
 
         <Text style={styles.sectionTitle}>Última aplicação</Text>
@@ -101,6 +130,97 @@ export default function MedicationScreen() {
           </Text>
         </View>
       </ScrollView>
+      <Modal visible={modalVisible} animationType="slide" transparent>
+  <View style={styles.modalOverlay}>
+    <View style={styles.modalContent}>
+      <View style={styles.modalHeader}>
+        <Text style={styles.modalTitle}>Nova aplicação</Text>
+
+        <TouchableOpacity onPress={() => setModalVisible(false)}>
+          <Text style={styles.closeText}>Fechar</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Text style={styles.label}>Medicamento</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Ex: Mounjaro"
+        placeholderTextColor={COLORS.subtitle}
+      />
+
+      <Text style={styles.label}>Dose</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Ex: 5mg"
+        placeholderTextColor={COLORS.subtitle}
+      />
+
+<Text style={styles.label}>Data</Text>
+<TouchableOpacity
+  style={styles.input}
+  activeOpacity={0.8}
+  onPress={() => setShowDatePicker(true)}
+>
+  <Text style={styles.inputText}>{formatDate(applicationDate)}</Text>
+</TouchableOpacity>
+
+<Text style={styles.label}>Horário</Text>
+<TouchableOpacity
+  style={styles.input}
+  activeOpacity={0.8}
+  onPress={() => setShowTimePicker(true)}
+>
+  <Text style={styles.inputText}>{formatTime(applicationDate)}</Text>
+</TouchableOpacity>
+
+      <Text style={styles.label}>Local da aplicação</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Ex: Abdômen"
+        placeholderTextColor={COLORS.subtitle}
+      />
+
+      {showDatePicker && (
+  <DateTimePicker
+    value={applicationDate}
+    mode="date"
+    display="default"
+    onChange={(event, selectedDate) => {
+      setShowDatePicker(false);
+
+      if (selectedDate) {
+        setApplicationDate(selectedDate);
+      }
+    }}
+  />
+)}
+
+{showTimePicker && (
+  <DateTimePicker
+    value={applicationDate}
+    mode="time"
+    display="default"
+    onChange={(event, selectedDate) => {
+      setShowTimePicker(false);
+
+      if (selectedDate) {
+        const newDate = new Date(applicationDate);
+
+        newDate.setHours(selectedDate.getHours());
+        newDate.setMinutes(selectedDate.getMinutes());
+
+        setApplicationDate(newDate);
+      }
+    }}
+  />
+)}
+
+      <View style={styles.modalButtonArea}>
+        <PinkButton title="Salvar aplicação" onPress={() => setModalVisible(false)} />
+      </View>
+    </View>
+  </View>
+</Modal>
     </SafeAreaView>
   );
 }
@@ -291,4 +411,57 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     color: COLORS.subtitle,
   },
+  modalOverlay: {
+  flex: 1,
+  backgroundColor: "rgba(0,0,0,0.25)",
+  justifyContent: "flex-end",
+},
+modalContent: {
+  maxHeight: "88%",
+  backgroundColor: COLORS.background,
+  borderTopLeftRadius: 32,
+  borderTopRightRadius: 32,
+  padding: 24,
+},
+modalHeader: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: 22,
+},
+modalTitle: {
+  fontSize: 24,
+  fontWeight: "900",
+  color: COLORS.text,
+},
+closeText: {
+  fontSize: 14,
+  fontWeight: "800",
+  color: COLORS.primary,
+},
+label: {
+  fontSize: 14,
+  fontWeight: "800",
+  color: COLORS.text,
+  marginBottom: 8,
+},
+input: {
+  backgroundColor: COLORS.surface,
+  borderWidth: 1,
+  borderColor: COLORS.border,
+  borderRadius: 18,
+  paddingHorizontal: 16,
+  paddingVertical: 14,
+  fontSize: 15,
+  color: COLORS.text,
+  marginBottom: 16,
+},
+modalButtonArea: {
+  marginTop: 10,
+  marginBottom: 20,
+},
+inputText: {
+  fontSize: 15,
+  color: COLORS.text,
+},
 });
