@@ -1,5 +1,6 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import {
+  Activity,
   Camera,
   Clock,
   HeartPulse,
@@ -15,8 +16,10 @@ import MeasurementsScreen from "../screens/Measurements/MeasurementsScreen";
 import FastingScreen from "../screens/Fasting/FastingScreen";
 import MedicationScreen from "../screens/Medication/MedicationScreen";
 import ProfileScreen from "../screens/Profile/ProfileScreen";
-import { COLORS } from "../theme/colors";
 import HealthModuleScreen from "../screens/Health/HealthModuleScreen";
+import ActivityScreen from "../screens/Activity/ActivityScreen";
+
+import { COLORS } from "../theme/colors";
 
 export type BottomTabParamList = {
   Dashboard: undefined;
@@ -24,6 +27,7 @@ export type BottomTabParamList = {
   Measurements: undefined;
   Fasting: undefined;
   Health: undefined;
+  Activity: undefined;
   Medication: undefined;
   Profile: undefined;
 };
@@ -82,6 +86,22 @@ export default function BottomTabs() {
       />
 
       <Tab.Screen
+        name="Health"
+        component={HealthModuleScreen}
+        options={{
+          tabBarIcon: ({ color }) => <HeartPulse size={26} color={color} />,
+        }}
+      />
+
+      <Tab.Screen
+        name="Activity"
+        component={ActivityScreen}
+        options={{
+          tabBarIcon: ({ color }) => <Activity size={26} color={color} />,
+        }}
+      />
+
+      <Tab.Screen
         name="Medication"
         component={MedicationScreen}
         options={{
@@ -96,15 +116,6 @@ export default function BottomTabs() {
           tabBarIcon: ({ color }) => <User size={26} color={color} />,
         }}
       />
-      <Tab.Screen
-  name="Health"
-  component={HealthModuleScreen}
-  options={{
-    tabBarIcon: ({ color }) => (
-      <HeartPulse size={26} color={color} />
-    ),
-  }}
-/>
     </Tab.Navigator>
   );
 }
