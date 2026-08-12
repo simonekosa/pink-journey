@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import { SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 import {
   CalendarDays,
@@ -46,9 +47,11 @@ export default function DashboardScreen() {
   const [fastingHistory, setFastingHistory] = useState<FastingRecord[]>([]);
   const [photoRecords, setPhotoRecords] = useState<PhotoRecord[]>([]);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, []),
+  );
 
   async function loadData() {
     const bioRecords = await getBioimpedanceRecords();

@@ -88,7 +88,11 @@ export default function ProfileScreen() {
     setModalVisible(false);
   }
 
-  const weightToLose = profile.startWeight - profile.targetWeight;
+  const weightToLose = Math.max(profile.startWeight - profile.targetWeight, 0);
+
+  const weightToLoseLabel = weightToLose.toLocaleString("pt-BR", {
+    maximumFractionDigits: 1,
+  });
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -108,9 +112,7 @@ export default function ProfileScreen() {
         <View style={styles.heroCard}>
           <View>
             <Text style={styles.heroLabel}>Meta principal</Text>
-            <Text style={styles.heroTitle}>
-              Perder {weightToLose > 0 ? weightToLose : 0} kg
-            </Text>
+            <Text style={styles.heroTitle}>Perder {weightToLoseLabel} kg</Text>
             <Text style={styles.heroText}>
               {profile.startWeight} kg → {profile.targetWeight} kg
             </Text>
@@ -188,7 +190,10 @@ export default function ProfileScreen() {
           <PinkButton title="Editar Perfil" onPress={openEditModal} />
         </View>
 
-        <TouchableOpacity style={styles.secondaryButton} onPress={openEditModal}>
+        <TouchableOpacity
+          style={styles.secondaryButton}
+          onPress={openEditModal}
+        >
           <Pencil size={18} color={COLORS.primary} />
           <Text style={styles.secondaryButtonText}>Atualizar metas</Text>
         </TouchableOpacity>
@@ -464,50 +469,50 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
   },
   modalOverlay: {
-  flex: 1,
-  backgroundColor: "rgba(0,0,0,0.25)",
-  justifyContent: "flex-end",
-},
-modalContent: {
-  maxHeight: "88%",
-  backgroundColor: COLORS.background,
-  borderTopLeftRadius: 32,
-  borderTopRightRadius: 32,
-  padding: 24,
-},
-modalHeader: {
-  flexDirection: "row",
-  justifyContent: "space-between",
-  alignItems: "center",
-  marginBottom: 22,
-},
-modalTitle: {
-  fontSize: 24,
-  fontWeight: "900",
-  color: COLORS.text,
-},
-label: {
-  fontSize: 14,
-  fontWeight: "800",
-  color: COLORS.text,
-  marginBottom: 8,
-},
-input: {
-  backgroundColor: COLORS.surface,
-  borderWidth: 1,
-  borderColor: COLORS.border,
-  borderRadius: 18,
-  paddingHorizontal: 16,
-  paddingVertical: 14,
-  fontSize: 15,
-  color: COLORS.text,
-  marginBottom: 16,
-},
-textArea: {
-  minHeight: 110,
-},
-modalButtonArea: {
-  marginTop: 10,
-  marginBottom: 30,
-},
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.25)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    maxHeight: "88%",
+    backgroundColor: COLORS.background,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    padding: 24,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 22,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: "900",
+    color: COLORS.text,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: COLORS.text,
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: COLORS.text,
+    marginBottom: 16,
+  },
+  textArea: {
+    minHeight: 110,
+  },
+  modalButtonArea: {
+    marginTop: 10,
+    marginBottom: 30,
+  },
 });

@@ -1,6 +1,5 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import {
-  Activity,
   Camera,
   Clock,
   HeartPulse,
@@ -8,12 +7,12 @@ import {
   Scale,
   User,
 } from "lucide-react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import DashboardScreen from "../screens/Dashboard/DashboardScreen";
 import PhotosScreen from "../screens/Photos/PhotosScreen";
 import MeasurementsScreen from "../screens/Measurements/MeasurementsScreen";
 import FastingScreen from "../screens/Fasting/FastingScreen";
-import MedicationScreen from "../screens/Medication/MedicationScreen";
 import ProfileScreen from "../screens/Profile/ProfileScreen";
 import HealthModuleScreen from "../screens/Health/HealthModuleScreen";
 
@@ -24,28 +23,38 @@ export type BottomTabParamList = {
   Photos: undefined;
   Measurements: undefined;
   Fasting: undefined;
-  Health: undefined;  
+  Health: undefined;
   Profile: undefined;
 };
 
 const Tab = createBottomTabNavigator<BottomTabParamList>();
 
 export default function BottomTabs() {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tab.Navigator
       initialRouteName="Dashboard"
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: false,
+
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.subtitle,
+
         tabBarStyle: {
-          height: 72,
+          height: 62 + insets.bottom,
           backgroundColor: COLORS.white,
+
           borderTopWidth: 1,
           borderTopColor: COLORS.border,
+
           paddingTop: 10,
-          paddingBottom: 10,
+          paddingBottom: Math.max(insets.bottom, 10),
+        },
+
+        tabBarItemStyle: {
+          paddingVertical: 4,
         },
       }}
     >
@@ -53,7 +62,9 @@ export default function BottomTabs() {
         name="Dashboard"
         component={DashboardScreen}
         options={{
-          tabBarIcon: ({ color }) => <Home size={26} color={color} />,
+          tabBarIcon: ({ color }) => (
+            <Home size={26} color={color} />
+          ),
         }}
       />
 
@@ -61,7 +72,9 @@ export default function BottomTabs() {
         name="Photos"
         component={PhotosScreen}
         options={{
-          tabBarIcon: ({ color }) => <Camera size={26} color={color} />,
+          tabBarIcon: ({ color }) => (
+            <Camera size={26} color={color} />
+          ),
         }}
       />
 
@@ -69,7 +82,9 @@ export default function BottomTabs() {
         name="Measurements"
         component={MeasurementsScreen}
         options={{
-          tabBarIcon: ({ color }) => <Scale size={26} color={color} />,
+          tabBarIcon: ({ color }) => (
+            <Scale size={26} color={color} />
+          ),
         }}
       />
 
@@ -77,7 +92,9 @@ export default function BottomTabs() {
         name="Fasting"
         component={FastingScreen}
         options={{
-          tabBarIcon: ({ color }) => <Clock size={26} color={color} />,
+          tabBarIcon: ({ color }) => (
+            <Clock size={26} color={color} />
+          ),
         }}
       />
 
@@ -85,19 +102,19 @@ export default function BottomTabs() {
         name="Health"
         component={HealthModuleScreen}
         options={{
-          tabBarIcon: ({ color }) => <HeartPulse size={26} color={color} />,
+          tabBarIcon: ({ color }) => (
+            <HeartPulse size={26} color={color} />
+          ),
         }}
       />
-
-      
-
-      
 
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
         options={{
-          tabBarIcon: ({ color }) => <User size={26} color={color} />,
+          tabBarIcon: ({ color }) => (
+            <User size={26} color={color} />
+          ),
         }}
       />
     </Tab.Navigator>
